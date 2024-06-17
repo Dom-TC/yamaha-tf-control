@@ -12,17 +12,17 @@ ip = "localhost"
 port = 49280
 
 # Version
-version = "1.3.0"
+version = "1.3.1"
 tf_version = "4.01"
 
 
 # Sends the command to set a level to a given device
-def _set_level(socket, dca, level):
+def _set_level(socket: socket, dca: int, level: int):
     level = int(level)
     socket.sendall(f"set MIXER:Current/DcaCh/Fader/Level {dca} 0 {level}\n".encode())
 
 
-def fade_dca(socket, dca, target_level, duration):
+def fade_dca(socket: socket, dca: int, target_level: int, duration: float):
     # Console DCA numbers start at 0
     dca = dca - 1
 
@@ -52,7 +52,8 @@ def fade_dca(socket, dca, target_level, duration):
     # Check if received expected response
     if response[0] != expected_respnonse_prefix:
         logging.error("The console did not send back the expected response.")
-        sys.exit(2)
+        socket.close()
+        return
 
     # Parse response from console for the final number - the current level
     starting_level = int(response[1][:-1].strip('"'))
@@ -154,11 +155,15 @@ if __name__ == "__main__":
         parser.error(f"argument -t/--time: time must be greater than 0: {duration}")
 
     if verbose:
-        logging.info(f"IP:               {ip}")
-        logging.info(f"Port:             {port}")
-        logging.info(f"DCA:              {dca}")
-        logging.info(f"Target Level:     {target_level}")
-        logging.info(f"Target Duration:  {duration}")
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.CRITICAL)
+
+    logging.info(f"IP:               {ip}")
+    logging.info(f"Port:             {port}")
+    logging.info(f"DCA:              {dca}")
+    logging.info(f"Target Level:     {target_level}")
+    logging.info(f"Target Duration:  {duration}")
 
     # Set socket details
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -167,19 +172,17 @@ if __name__ == "__main__":
     sock.connect((ip, port))
 
     # Record the current (start) time to calculate the actual duration at end
-    if verbose:
-        start_time = time.perf_counter()
-        logging.info(f"Start Time:       {start_time}")
+    start_time = time.perf_counter()
+    logging.info(f"Start Time:       {start_time}")
 
     fade_dca(sock, dca, target_level, duration)
 
-    if verbose:
-        # Record the current (end) time
-        end_time = time.perf_counter()
-        logging.info(f"End Time:         {end_time}")
+    # Record the current (end) time
+    end_time = time.perf_counter()
+    logging.info(f"End Time:         {end_time}")
 
-        # Calculate how long the fade took
-        logging.info(f"Duration:         {end_time - start_time:0.4f} seconds")
+    # Calculate how long the fade took
+    logging.info(f"Duration:         {end_time - start_time:0.4f} seconds")
 
     # Close socket
     sock.close()

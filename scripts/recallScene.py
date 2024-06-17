@@ -11,26 +11,27 @@ ip = "localhost"
 port = 49280
 
 # Version
-version = "1.3.0"
+version = "1.3.1"
 tf_version = "4.01"
 
 
-def recall_scene(socket, bank, scene):
+def recall_scene(socket: socket, bank: str, scene: int):
     bank = bank.lower()
 
     # Validate scene
-    if type(scene) != int or scene not in range(0, 100):
-        logging.error(f"Scene must be a number between 1 and 99: {scene}")
-        sys.exit(2)
+    if not isinstance(scene, int) or scene not in range(0, 100):
+        logging.error(f"Scene must be a number between 1 and 99: {scene} {type(scene)}")
+        socket.close()
+        return
 
     # Validate bank
     if bank != "a" and bank != "b":
         logging.error(f"Bank must be either `a` or `b`: {bank}")
-        sys.exit(2)
+        socket.close()
+        return
 
     # Recall scene
-    if verbose:
-        logging.info(f"Recalling: {bank.upper()}{scene}")
+    logging.info(f"Recalling: {bank.upper()}{scene}")
 
     socket.sendall(f"ssrecall_ex scene_{bank} {scene}\n".encode())
 
@@ -42,6 +43,7 @@ def recall_scene(socket, bank, scene):
         logging.error(
             f"The console did not send back the expected response.\nExpected:   {expected_response}\nRecieved:   {response}"
         )
+        socket.close()
 
 
 if __name__ == "__main__":
@@ -101,10 +103,14 @@ if __name__ == "__main__":
     verbose = args.verbose
 
     if verbose:
-        logging.info(f"IP:        {ip}")
-        logging.info(f"Port:      {port}")
-        logging.info(f"Bank:      {bank}")
-        logging.info(f"Scene:     {scene}")
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.CRITICAL)
+
+    logging.info(f"IP:        {ip}")
+    logging.info(f"Port:      {port}")
+    logging.info(f"Bank:      {bank}")
+    logging.info(f"Scene:     {scene}")
 
     # Set socket details
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

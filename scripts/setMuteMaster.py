@@ -11,11 +11,11 @@ ip = "localhost"
 port = 49280
 
 # Version
-version = "1.3.0"
+version = "1.3.1"
 tf_version = "4.01"
 
 
-def set_mute_master(socket, master, state):
+def set_mute_master(socket: socket, master: str, state: str):
     master = master.lower()
     state = state.lower()
 
@@ -26,7 +26,8 @@ def set_mute_master(socket, master, state):
         master_code = 1
     else:
         logging.error(f"Master must be either `input` or `fx`: {master}")
-        sys.exit(2)
+        socket.close()
+        return
 
     # Validate bank
     if state == "off":
@@ -35,11 +36,11 @@ def set_mute_master(socket, master, state):
         state_code = 1
     else:
         logging.error(f"State must be either `on` or `off`: {state}")
-        sys.exit(2)
+        socket.close()
+        return
 
     # Recall scene
-    if verbose:
-        logging.info(f"Setting {master} mute to {state}")
+    logging.info(f"Setting {master} mute to {state}")
 
     socket.sendall(
         f"set MIXER:Current/MuteMaster/On {master_code} 0 {state_code}\n".encode()
@@ -53,6 +54,8 @@ def set_mute_master(socket, master, state):
         logging.error(
             f"The console did not send back the expected response.\nExpected:   {expected_response}\nRecieved:   {response}"
         )
+        socket.close()
+        return
 
 
 if __name__ == "__main__":
@@ -112,10 +115,14 @@ if __name__ == "__main__":
     verbose = args.verbose
 
     if verbose:
-        logging.info(f"IP:          {ip}")
-        logging.info(f"Port:        {port}")
-        logging.info(f"Master:      {master}")
-        logging.info(f"State:       {state}")
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.CRITICAL)
+
+    logging.info(f"IP:          {ip}")
+    logging.info(f"Port:        {port}")
+    logging.info(f"Master:      {master}")
+    logging.info(f"State:       {state}")
 
     # Set socket details
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

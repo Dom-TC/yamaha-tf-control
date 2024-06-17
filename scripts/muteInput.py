@@ -11,11 +11,11 @@ ip = "localhost"
 port = 49280
 
 # Version
-version = "1.3.0"
+version = "1.3.1"
 tf_version = "4.01"
 
 
-def set_input_mute(socket, channel, state):
+def set_input_mute(socket: socket, channel: int, state: str):
     state = state.lower()
 
     # Validate bank
@@ -25,11 +25,11 @@ def set_input_mute(socket, channel, state):
         state_code = 1
     else:
         logging.error(f"State must be either `on` or `off`: {state}")
-        sys.exit(2)
+        socket.close()
+        return
 
     # Recall scene
-    if verbose:
-        logging.info(f"Setting channel {channel} mute to {state}")
+    logging.info(f"Setting channel {channel} mute to {state}")
 
     socket.sendall(
         f"set MIXER:Current/InCh/Fader/On {channel - 1} 0 {state_code}\n".encode()
@@ -43,6 +43,8 @@ def set_input_mute(socket, channel, state):
         logging.error(
             f"The console did not send back the expected response.\nExpected:   {expected_response}\nRecieved:   {response}"
         )
+        socket.close()
+        return
 
 
 if __name__ == "__main__":
@@ -102,10 +104,14 @@ if __name__ == "__main__":
     verbose = args.verbose
 
     if verbose:
-        logging.info(f"IP:          {ip}")
-        logging.info(f"Port:        {port}")
-        logging.info(f"Channel:     {channel}")
-        logging.info(f"State:       {state}")
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.CRITICAL)
+
+    logging.info(f"IP:          {ip}")
+    logging.info(f"Port:        {port}")
+    logging.info(f"Channel:     {channel}")
+    logging.info(f"State:       {state}")
 
     # Set socket details
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
